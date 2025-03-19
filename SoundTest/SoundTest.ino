@@ -1,6 +1,6 @@
 /*
   SoundTest
-  Modified from Arduino IDE example 02.ToneMelody and 02.Button
+  Modified from Arduino IDE example 02.ToneMelody, 02.Button, and 02.BlinkWithoutDelay
 
   Plays a melody and blinks an LED when a button is pushed 
 
@@ -14,15 +14,13 @@
   by Tom Igoe
   modified 19 Mar 2025
   by Avis Chen
-
-  This example code is in the public domain.
-
-  https://www.arduino.cc/en/Tutorial/BuiltInExamples/toneMelody
 */
 
 // Declaration for sound variables
 #include "pitches.h"
+const int speakerPin = 8;
 
+const int numNotes = 8;
 // notes in the melody:
 int melody[] = {
   NOTE_G5, NOTE_FS5, NOTE_DS5, NOTE_A4, NOTE_GS4, NOTE_E5, NOTE_GS5, NOTE_C6
@@ -33,53 +31,117 @@ int noteDurations[] = {
   8, 8, 8, 8, 8, 8, 8, 4
 };
 
+int currentNote = 0;
+int noteTimings[numNotes];
+
 // Declaration for button variables
 const int buttonPin = 2;
 int buttonState = 0;
+bool buttonRecentLED = 0;
+bool buttonRecentSpeaker = 0;
+
 
 // Declaration for LED variables
 const int ledPin = 13;
+int ledState = LOW;
+const int intervalLED = 175;  // interval at which to blink LEDs after scoring (milliseconds)
+int numBlinks = 0; // Blink tracker 
 
+// Declaration for uninteruptable time variables
+unsigned long currentMillis = 0; // Stores the current time (duration the program has been running)
+unsigned long previousMillisNote = 0;  // will store last time the speaker was updated
+unsigned long previousMillisLED = 0;  // will store last time LED was updated
 
 void setup() {
   // initialize the LED pin as an output:
   pinMode(ledPin, OUTPUT);
   // initialize the pushbutton pin as an input:
   pinMode(buttonPin, INPUT);
+
+  // Converts note lengths to millisecond basis
+  for (int note; note < numNotes; note++) {
+    noteTimings[note] = 1250 / noteDurations[note];
+  }
 }
 
 void loop() {
-  buttonState = digitalRead(buttonPin);
+  // If the button is pressed blink the LED and play a melody
+  currentMillis = millis(); // Store the current time
 
-  // check if the pushbutton is pressed. If it is, the buttonState is HIGH:
+  buttonState = digitalRead(buttonPin); // Check if the button is pressed
+
+  // When the button is pressed, reset and trigger the operation of the LED and speaker
   if (buttonState == HIGH) {
-    // turn LED on:
-    digitalWrite(ledPin, HIGH);
-    playMelody();
-  } 
+    buttonRecentLED = 1;
+    buttonRecentSpeaker = 1;
+    numBlinks = 0;
+    currentNote = 0;
+  }
   
-  else {
-    // turn LED off:
+  // If the LED has not completed its blinks, continue to blink
+  if (buttonRecentLED) {
+    ledBlink();
+  }
+  else { // Otherwise, turn it off
     digitalWrite(ledPin, LOW);
   }
+
+  // Likewise for the speaker and its melody
+  if (buttonRecentSpeaker) {
+    playMelody();
+  }
+  else {
+      noTone(speakerPin);
+  }
+
+
+}
+
+void ledBlink() {
+  int timeSinceBlink = currentMillis - previousMillisLED; 
+  // If a long time has passed, deactivate LEDs
+  if (numBlinks >= 5) {
+    buttonRecentLED = 0;
+    ledState = LOW;
+  }
+  
+  // If the button has been recently pushed, allow the LED to blink and play the melody
+  if (buttonRecentLED) {
+    //Blink the LED according to the LED interval
+    if (timeSinceBlink >= intervalLED) {
+      previousMillisLED = currentMillis;
+      if (ledState == LOW) {
+        ledState = HIGH;
+      }
+      else {
+        ledState = LOW;
+        numBlinks++;
+      }
+    }
+  }
+
+  digitalWrite(ledPin, ledState);
+
 }
 
 void playMelody() {
-  // iterate over the notes of the melody:
-  for (int thisNote = 0; thisNote < 8; thisNote++) {
-
-    // to calculate the note duration, take 1.75 seconds divided by the note type.
-    // 1.75 seconds feels right for the BPM of this motif
-    //e.g. quarter note = 1750 / 4, eighth note = 1750/8, etc.
-    int noteDuration = 1750 / noteDurations[thisNote];
-    tone(8, melody[thisNote], noteDuration);
-
-    // to distinguish the notes, set a minimum time between them.
-    int pauseBetweenNotes = noteDuration * .70;
-    delay(pauseBetweenNotes);
-    // stop the tone playing:
-    noTone(8);
+  int timeSinceNote = currentMillis - previousMillisNote; 
+  
+  // If all notes have been played, deactivate the speaker
+  if (currentNote >= numNotes) {
+    buttonRecentSpeaker = 0;
+    noTone(speakerPin);
   }
+
+  // For each note in the melody, play the corresponding note for the right duration
+  if (timeSinceNote <= noteTimings[currentNote]) {
+    tone(speakerPin, melody[currentNote]);
+  }
+  else { // After a note is done being played, iterate to the next note
+    previousMillisNote = currentMillis;
+    currentNote++;
+    noTone(speakerPin);
+  }  
 }
 
 
