@@ -1,11 +1,14 @@
 /*
   SoundTest
-  Modified from Arduino IDE example 02.ToneMelody
+  Modified from Arduino IDE example 02.ToneMelody and 02.Button
 
-  Plays a melody
+  Plays a melody and blinks an LED when a button is pushed 
 
   circuit:
   - 8 ohm speaker on digital pin 8
+  - LED attached from pin 13 to ground through 330 ohm resistor
+  - pushbutton attached to pin 2 from +5V
+  - 10K resistor attached to pin 2 from ground
 
   created 21 Jan 2010
   by Tom Igoe
@@ -17,6 +20,7 @@
   https://www.arduino.cc/en/Tutorial/BuiltInExamples/toneMelody
 */
 
+// Declaration for sound variables
 #include "pitches.h"
 
 // notes in the melody:
@@ -29,7 +33,38 @@ int noteDurations[] = {
   8, 8, 8, 8, 8, 8, 8, 4
 };
 
+// Declaration for button variables
+const int buttonPin = 2;
+int buttonState = 0;
+
+// Declaration for LED variables
+const int ledPin = 13;
+
+
 void setup() {
+  // initialize the LED pin as an output:
+  pinMode(ledPin, OUTPUT);
+  // initialize the pushbutton pin as an input:
+  pinMode(buttonPin, INPUT);
+}
+
+void loop() {
+  buttonState = digitalRead(buttonPin);
+
+  // check if the pushbutton is pressed. If it is, the buttonState is HIGH:
+  if (buttonState == HIGH) {
+    // turn LED on:
+    digitalWrite(ledPin, HIGH);
+    playMelody();
+  } 
+  
+  else {
+    // turn LED off:
+    digitalWrite(ledPin, LOW);
+  }
+}
+
+void playMelody() {
   // iterate over the notes of the melody:
   for (int thisNote = 0; thisNote < 8; thisNote++) {
 
@@ -47,6 +82,4 @@ void setup() {
   }
 }
 
-void loop() {
-  // no need to repeat the melody.
-}
+
