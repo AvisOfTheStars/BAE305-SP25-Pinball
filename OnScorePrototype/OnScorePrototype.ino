@@ -18,16 +18,21 @@
   by Avis Chen
 */
 
+// Declaration for score sensor (laser gates) identification
+bool goalSensors[] = {0, 0, 0, 0}; 
+const int goalPins[] = {2, 3, 4, 5}; // Arranged in order of difficulty
+int numGoals = 4; 
+bool activeGoal = 0;
+int previousGoals[] = {0, 0, 0, 0};
+int scoringStreak = 0; // Keeps track of the number of recent goals, e.g. a combo tracker
+int comboTimeLimit = 5000; // The upper limit on how long a combo can be sustained without a new goal. Modified by the difficulty of each goal.
+
 // Declaration for sound variables
 #include "pitches.h"
 const int speakerPin = 8;
 
 int note = NOTE_D4;
 bool activeNote = 0;
-
-// Declaration for button variables
-const int buttonPin = 2;
-int buttonState = 0;
 
 // Declaration for LED variables
 const int ledPin = 13;
@@ -43,38 +48,50 @@ unsigned long currentMillis = 0; // Stores the current time (duration the progra
 unsigned long previousMillisNote = 0;  // will store last time the speaker was updated
 unsigned long previousMillisLED = 0;  // will store last time LED was updated
 unsigned long previousGoal = 0; // Stores the last time a goal was scored
-int scoringStreak = 0; // Keeps track of the number of recent goals, e.g. a combo tracker
 
+// Declaration of reset variables
+const int resetPin = 7;
 
 void setup() {
   // initialize the LED pin as an output:
   pinMode(ledPin, OUTPUT);
-  // initialize the pushbutton pin as an input:
-  pinMode(buttonPin, INPUT);
+
+  // Initialize laser gate pins as inputs
+  for (int i = 0; i < numGoals; i++) {
+    pinMode(goalPins[i], INPUT);
+  }
 }
 
 void loop() {
-  // If the button is pressed blink the LED and play a melody
-  currentMillis = millis(); // Store the current time
+  // If any goal sensors are tripped, provide the user with audiovisual feedback (LEDs and piezo buzzer) while incrementing the player's score
+  
+  currentMillis = millis(); // Store the current time to reference with "last activation" times
 
-  buttonState = digitalRead(buttonPin); // Check if the button is pressed
-
-  // When the button is pressed, reset and trigger the operation of the LED and speaker
-  if (buttonState == HIGH) {
-    int timeSinceGoal = currentMillis - previousGoal;
-    // Resets scoring streak 
-    if (timeSinceGoal < 200) {}
+  // Checks if any laser gates have been tripped and stores the identity of any activated gates
+  for (int i = 0; i < numGoals; i++) {
+    goalSensors[i] = digitalRead(goalPins[i]);
+    if (goalSensors[i]) {
+      previousGoals[i] = currentMillis;
+      int timeSinceGoal = currentMillis - previousGoal;
       
-    else if (timeSinceGoal > 5000) {
-      scoringStreak = 1;
-      onScore();
-    }
-    else {
-      scoringStreak += 1;
-      onScore();
+      // Resets scoring streak 
+      if (timeSinceGoal < 200) {} // Prevents one goal from being counted twice
+        
+      else if (timeSinceGoal > comboTimeLimit) { // If the combo has expired, reset combo tracking variables and start a new combo
+        scoringStreak = 1;
+        comboTimeLimit = 5000;
+        onScore();
+      }
+
+      else { // Scoring a goal during an active combo increases the combo and extends the time limit
+        scoringStreak += 1;
+        comboTimeLimit += (250 + (i * 500)); // Time extension is increased based on goal difficulty
+        onScore();
+      }
     }
   }
-  
+
+  // When the button is pressed, reset and trigger the operation of the LED and speaker  
 
   // The following if cases should be redundant but the circuit behaves weirdly without them
   // If the LED has not completed its blinks, continue to blink
@@ -179,4 +196,11 @@ int playNote() {
     activeNote = 0;
     noTone(speakerPin);
   }  
+}
+
+void reset() {
+  scoringStreak = 0;
+  previousGoal = 0;
+  previousMillisLED = 0;
+  previousMillisNote = 0;
 }
