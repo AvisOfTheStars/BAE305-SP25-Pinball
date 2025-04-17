@@ -20,10 +20,13 @@
 
 // Declaration for score sensor (laser gates) identification
 bool goalSensors[] = {0, 0, 0, 0}; 
-const int goalPins[] = {2, 3, 4, 5}; // Arranged in order of difficulty
+const int goalPins[] = {A1, A2, A3, A4}; // Arranged in order of difficulty
 int numGoals = 4; 
 bool activeGoal = 0;
 int previousGoals[] = {0, 0, 0, 0};
+
+// Declaration of score tracking variables
+int playerScore = 0;
 int scoringStreak = 0; // Keeps track of the number of recent goals, e.g. a combo tracker
 int comboTimeLimit = 5000; // The upper limit on how long a combo can be sustained without a new goal. Modified by the difficulty of each goal.
 
@@ -49,8 +52,11 @@ unsigned long previousMillisNote = 0;  // will store last time the speaker was u
 unsigned long previousMillisLED = 0;  // will store last time LED was updated
 unsigned long previousGoal = 0; // Stores the last time a goal was scored
 
-// Declaration of reset variables
+// Declaration of reset/lives variables
 const int resetPin = 7;
+const int holePin = A6;
+int lives = 3;
+
 
 void setup() {
   // initialize the LED pin as an output:
@@ -69,8 +75,9 @@ void loop() {
 
   // Checks if any laser gates have been tripped and stores the identity of any activated gates
   for (int i = 0; i < numGoals; i++) {
-    goalSensors[i] = digitalRead(goalPins[i]);
-    if (goalSensors[i]) {
+    goalSensors[i] = analogRead(goalPins[i]);
+
+    if (goalSensors[i] < 1000) {
       previousGoals[i] = currentMillis;
       int timeSinceGoal = currentMillis - previousGoal;
       
@@ -80,15 +87,20 @@ void loop() {
       else if (timeSinceGoal > comboTimeLimit) { // If the combo has expired, reset combo tracking variables and start a new combo
         scoringStreak = 1;
         comboTimeLimit = 5000;
-        onScore();
+        onScore(i);
       }
-
       else { // Scoring a goal during an active combo increases the combo and extends the time limit
         scoringStreak += 1;
         comboTimeLimit += (250 + (i * 500)); // Time extension is increased based on goal difficulty
-        onScore();
+        onScore(i);
       }
     }
+  }
+
+  if (analogRead(holePin) < 1000) {
+    lives--;
+    if (lives <= 0)
+      reset();
   }
 
   // When the button is pressed, reset and trigger the operation of the LED and speaker  
@@ -112,7 +124,7 @@ void loop() {
 
 }
 
-void onScore() {
+int onScore(int goalID) {
   // Resets and enables the operation of the speaker and LED
   activeLED = 1;
   activeNote = 1;
@@ -120,6 +132,20 @@ void onScore() {
   previousGoal = currentMillis;
   previousMillisNote = currentMillis;
 
+  switch (goalID) {
+    case 0:
+      playerScore += 50;
+      break;
+    case 1:
+      playerScore += 100;
+      break;
+    case 2:
+      playerScore += 200;
+      break;
+    case 3:
+      playerScore += 250;
+      break;
+  }
   
   // Depending on how many recent goals have happened, reward the player with progressively more ceremonious lights and noises
   // The note progression is custom, I labbed it out on piano and ported it over to the code  
@@ -199,8 +225,18 @@ int playNote() {
 }
 
 void reset() {
+  // Reset the player's score and tracking variables to their starting values.
   scoringStreak = 0;
   previousGoal = 0;
   previousMillisLED = 0;
   previousMillisNote = 0;
+
+  playerScore = 0;
+  lives = 3;
+
+  // Disable AV systems
+  noTone(speakerPin);
+  ledState = LOW;
+  digitalWrite(ledPin, ledState);
+
 }
