@@ -27,14 +27,18 @@
   https://docs.arduino.cc/built-in-examples/analog/AnalogInput/
 */
 
-int sensorPin = A0;   // select the input pin for the potentiometer
+int sensorPin = A1;   // select the input pin for the potentiometer
 int ledPin = 13;      // select the pin for the LED
 int sensorValue = 0;  // variable to store the value coming from the sensor
+int sensorLimit = 910;
 
 void setup() {
   // declare the ledPin as an OUTPUT:
   pinMode(ledPin, OUTPUT);
   Serial.begin(9600);
+
+  calibrate();
+
 }
 
 void loop() {
@@ -42,5 +46,20 @@ void loop() {
   int data=analogRead(sensorPin);
   Serial.print("ldr reading=");
   Serial.println(data);
-  delay(100);
+  if (abs(data - sensorLimit) > 75)
+  {
+    digitalWrite(ledPin, HIGH);
+    delay(5000);
+  }
+  else
+   digitalWrite(ledPin, LOW);
+  delay(10);
+}
+
+void calibrate() {
+  int calibTotal = 0;
+  for (int i = 0; i < 5000; i++) {
+    calibTotal += i;
+  }
+  sensorLimit = (calibTotal / 5000);
 }
