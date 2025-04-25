@@ -5,19 +5,21 @@
 LiquidCrystal lcd(13, 12, 11, 10, 9, 8);
 
 // Scoring and sensor system
-const int goalPins[] = {A1, A2, A3, A4};
-const int numGoals = 4;
+const int goalPins[] = {A1};//, A2, A3, A4};
+const int numGoals = 0;//4;
 int playerScore = 0;
 int lastScore = 0;
 int scoringStreak = 0;
 int comboTimeLimit = 5000;
 unsigned long previousGoal = 0;
 
-bool goalSensors[] = {0, 0, 0, 0};
+int sensorLimit = 0;
+
+int goalSensors[] = {0, 0, 0, 0};
 
 // Lives
 int lives = 3;
-const int holePin = A6;
+const int holePin = A5;
 
 // Audio-visual feedback
 const int speakerPin = 7;
@@ -44,26 +46,33 @@ void setup() {
   for (int i = 0; i < numGoals; i++) {
     pinMode(goalPins[i], INPUT);
   }
-  pinMode(holePin, INPUT);
+  //pinMode(holePin, INPUT);
 
   updateDisplay(0);
+
+  Serial.begin(9600);
+  calibrate();
 }
 
 void loop() {
   currentMillis = millis();
 
+  Serial.println(analogRead(holePin));
+
   // Check for goal hits
   for (int i = 0; i < numGoals; i++) {
-    goalSensors[i] = analogRead(goalPins[i]) < 1000;
-
-    if (goalSensors[i]) {
+    //goalSensors[i] = (analogRead(goalPins[i]) < 1000);
+    
+    //if ((abs(analogRead(goalPins[i]) - sensorLimit) > 125)) {
+    if (analogRead(goalPins[i]) < 920) {
       unsigned long timeSinceGoal = currentMillis - previousGoal;
 
       if (timeSinceGoal > 200) {
         if (timeSinceGoal > comboTimeLimit) {
           scoringStreak = 1;
           comboTimeLimit = 5000;
-        } else {
+        } 
+        else {
           scoringStreak++;
           comboTimeLimit += (250 + (i * 500));
         }
@@ -78,7 +87,7 @@ void loop() {
   }
 
   // Life loss detection
-  if (analogRead(holePin) < 1000) {
+  if (analogRead(holePin) < 980) {
     lives--;
     if (lives <= 0) {
       resetGame();
@@ -87,6 +96,7 @@ void loop() {
     }
     delay(500); // debounce delay
   }
+  
 
   // AV updates
   if (activeLED) {
@@ -203,4 +213,12 @@ void resetGame() {
   noTone(speakerPin);
 
   updateDisplay(0);
+}
+
+void calibrate() {
+  int calibTotal = 0;
+  for (int i = 0; i < 5000; i++) {
+    calibTotal += i;
+  }
+  sensorLimit = (calibTotal / 5000);
 }
