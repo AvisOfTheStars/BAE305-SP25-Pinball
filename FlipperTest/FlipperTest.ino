@@ -3,7 +3,7 @@
 const int buttonLeftPin = 4;
 const int flipperLeftPin = 2;
 
-const int buttonRightPin = 5;
+const int buttonRightPin = 6;
 const int flipperRightPin = 3;
 
 void setup() {

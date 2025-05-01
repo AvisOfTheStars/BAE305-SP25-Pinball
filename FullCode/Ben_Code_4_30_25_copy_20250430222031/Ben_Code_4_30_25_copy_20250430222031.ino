@@ -7,18 +7,18 @@ LiquidCrystal lcd(12, 11, 10, 9, 8, 7);
 const int leftFlipperPin = 2;
 const int rightFlipperPin = 3;
 const int leftButtonPin = 4;
-const int rightButtonPin = 5;
-const int resetButtonPin = 6;
+const int rightButtonPin = 6;
+const int resetButtonPin = 5;
 const int piezoPin = 1; // D1 (RX) — Serial disabled
 
 // Scoring Sensors
 const int scorePins[] = {A1, A2, A3, A4};
 const int numScorePins = sizeof(scorePins) / sizeof(scorePins[0]);
-const int scoreThresholds[] = {400, 800, 500, 800}; // Individual thresholds
+int scoreThresholds[] = {400, 800, 500, 800}; // Individual thresholds
 
 // Game Over Sensor
 const int gameOverSensorPin = A5;
-const int gameOverThreshold = 450;  // Lowered from 750 to prevent boot trigger
+int gameOverThreshold = 450;  // Lowered from 750 to prevent boot trigger
 
 // Game Logic
 int score = 0;
@@ -45,8 +45,19 @@ void setup() {
   pinMode(rightButtonPin, INPUT_PULLUP);
   pinMode(resetButtonPin, INPUT_PULLUP);
 
+  // Score sensors
+  for (int i = 0; i < numScorePins; i++) {
+    pinMode(scorePins[i], INPUT);
+  }
+
   // Game over sensor
   pinMode(gameOverSensorPin, INPUT);
+
+  // Sensor Calibrartion
+  for (int j = 0; j < numScorePins; j++) {
+    scoreThresholds[j] = calibrate(scorePins[j]);
+  }
+  gameOverThreshold = calibrate(gameOverSensorPin);
 }
 
 void loop() {
@@ -74,8 +85,8 @@ void handleScoring() {
 }
 
 void handleFlippers() {
-  digitalWrite(leftFlipperPin, digitalRead(leftButtonPin) == LOW ? LOW : HIGH);
-  digitalWrite(rightFlipperPin, digitalRead(rightButtonPin) == LOW ? LOW : HIGH);
+  digitalWrite(leftFlipperPin, (digitalRead(leftButtonPin) == LOW) ? LOW : HIGH);
+  digitalWrite(rightFlipperPin, (digitalRead(rightButtonPin) == LOW) ? LOW : HIGH);
 }
 
 void checkGameOverSensor() {
@@ -94,6 +105,7 @@ void checkGameOverSensor() {
 void handleReset() {
   if (digitalRead(resetButtonPin) == LOW) {
     delay(200); // debounce
+    analogRead(gameOverSensorPin); // Test to see if value is sticking in memory
     score = 0;
     gameOver = false;
     updateDisplay();
@@ -117,4 +129,14 @@ void updateDisplay() {
   lcd.setCursor(0, 1);
   lcd.print("Score: ");
   lcd.print(score);
+}
+
+int calibrate(int pin) {
+  int calibTotal = 0;
+  int i = 0;
+  for (i = 0; i < 5000; i++) {
+    calibTotal += analogRead(pin);
+  }
+  int sensorLimit = (calibTotal / i);
+  return (sensorLimit - 50);
 }

@@ -5,8 +5,8 @@
 LiquidCrystal lcd(13, 12, 11, 10, 9, 8);
 
 // Scoring and sensor system
-const int goalPins[] = {A1};//, A2, A3, A4};
-const int numGoals = 0;//4;
+const int goalPins[] = { A1 };  //, A2, A3, A4};
+const int numGoals = 0;         //4;
 int playerScore = 0;
 int lastScore = 0;
 int scoringStreak = 0;
@@ -15,7 +15,7 @@ unsigned long previousGoal = 0;
 
 int sensorLimit = 0;
 
-int goalSensors[] = {0, 0, 0, 0};
+int goalSensors[] = { 0, 0, 0, 0 };
 
 // Lives
 int lives = 3;
@@ -62,7 +62,7 @@ void loop() {
   // Check for goal hits
   for (int i = 0; i < numGoals; i++) {
     //goalSensors[i] = (analogRead(goalPins[i]) < 1000);
-    
+
     //if ((abs(analogRead(goalPins[i]) - sensorLimit) > 125)) {
     if (analogRead(goalPins[i]) < 920) {
       unsigned long timeSinceGoal = currentMillis - previousGoal;
@@ -71,8 +71,7 @@ void loop() {
         if (timeSinceGoal > comboTimeLimit) {
           scoringStreak = 1;
           comboTimeLimit = 5000;
-        } 
-        else {
+        } else {
           scoringStreak++;
           comboTimeLimit += (250 + (i * 500));
         }
@@ -94,9 +93,9 @@ void loop() {
     } else {
       updateDisplay(0);
     }
-    delay(500); // debounce delay
+    delay(500);  // debounce delay
   }
-  
+
 
   // AV updates
   if (activeLED) {
